@@ -1,6 +1,4 @@
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -8,55 +6,66 @@ public class Server {
     private static final int PORT = 1234;
 
     public static void main(String[] args) {
-        int port = 1234;
         ServerSocket serverSocket;
         Socket socket;
-        Thread t1;
-        Thread t2;
+        Thread resposta;
 
         //Inicialitza
         try {
             serverSocket = new ServerSocket(PORT);
             socket = serverSocket.accept();
             //Inicialitzem els Threads quan arriba el client per a millor gestió de recursos
-            t1 = new Thread(new ClientArrival(socket), "Thread 1");
-            t2 = new Thread(new ClientArrival(socket), "Thread 2");
-            t1.start();
-            t2.start();
-        } catch (IOException io){
-            System.out.println("Ha hagut un problema inicialitzant el servidor:\n\n" +
-                    io.getMessage());
+            resposta = new Thread(new Resposta(socket), "Thread 2");
+            resposta.start();
+            String cadenaRebuda = "";
+            String name = Thread.currentThread().getName();
+            System.out.println(name);
+            try {
+                DataInputStream dis = new DataInputStream(socket.getInputStream());
+
+                while (!cadenaRebuda.equals("FI")) {
+                    cadenaRebuda = dis.readUTF();
+                    System.out.println(cadenaRebuda);
+                }
+
+                dis.close();
+
+            } catch (IOException io) {
+                System.out.println("Ha hagut un problema inicialitzant el servidor:\n\n" +
+                        io.getMessage());
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    public static class ClientArrival implements Runnable {
+    public static class Resposta implements Runnable {
         Socket socket;
+        String missatge;
 
-        public ClientArrival(Socket socket) {
+        public Resposta(Socket socket)  {
             this.socket = socket;
         }
 
         @Override
         public void run() {
-            String cadenaRebuda = "";
-            String name = Thread.currentThread().getName();
             try {
-                DataInputStream dis = new DataInputStream(socket.getInputStream());
                 DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+                BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
-                while (!cadenaRebuda.equals("FI")) {
-                    cadenaRebuda = dis.readUTF();
-                    System.out.println(name + " " + cadenaRebuda);
-                    dos.writeUTF(cadenaRebuda.toUpperCase());
+                missatge = "";
+
+                while (!missatge.equals("FI")) {
+                    missatge = br.readLine();
+                    dos.writeUTF(missatge);
                 }
 
-                dis.close();
                 dos.close();
-                socket.close();
+                br.close();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-
         }
     }
 }
