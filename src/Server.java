@@ -9,17 +9,36 @@ public class Server {
         ServerSocket serverSocket;
         Socket socket;
         Thread resposta;
+        Thread escolta;
 
         //Inicialitza
         try {
             serverSocket = new ServerSocket(PORT);
             socket = serverSocket.accept();
             //Inicialitzem els Threads quan arriba el client per a millor gestió de recursos
-            resposta = new Thread(new Resposta(socket), "Thread 2");
+            resposta = new Thread(new Resposta(socket), "Thread Resposta");
+            escolta = new Thread(new Escolta(socket), "Thread Escolta");
             resposta.start();
+            escolta.start();
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static class Escolta implements Runnable {
+        Socket socket;
+
+        public Escolta(Socket socket)  {
+            this.socket = socket;
+        }
+
+        @Override
+        public void run() {
             String cadenaRebuda = "";
             String name = Thread.currentThread().getName();
             System.out.println(name);
+
             try {
                 DataInputStream dis = new DataInputStream(socket.getInputStream());
 
@@ -34,9 +53,6 @@ public class Server {
                 System.out.println("Ha hagut un problema inicialitzant el servidor:\n\n" +
                         io.getMessage());
             }
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 
