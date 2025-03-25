@@ -1,77 +1,106 @@
 import java.io.*;
 import java.net.Socket;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Client {
 
     private static final int PORT = 1234;
+    private static final String HOST = "localhost";
+    private static final AtomicBoolean lock = new AtomicBoolean(false);
+    private static Socket socket;
 
     public static void main(String[] args) {
-        String host = "localhost";
+
         Thread resposta;
         Thread escolta;
 
 
         try {
-            Socket socket = new Socket(host, PORT);
-            escolta = new Thread(new Escolta(socket), "Thread Escolta");
-            resposta = new Thread(new Resposta(socket), "Thread Escolta");
+            socket = new Socket(HOST, PORT);
+            escolta = new Thread(new Escolta(), "Thread Escolta");
+            resposta = new Thread(new Resposta(), "Thread Escolta");
             escolta.start();
             resposta.start();
-            escolta.join();
-            resposta.join();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static class Escolta implements Runnable{
-        Socket socket;
+    public static class Escolta implements Runnable {
 
-        public Escolta(Socket socket) {
-            this.socket = socket;
+        public Escolta()  {
         }
 
         @Override
         public void run() {
-            DataInputStream dis;
-            String cadenaServidor = "";
-            try {
-                dis = new DataInputStream(socket.getInputStream());
+            String cadenaRebuda = "";
+            String name = Thread.currentThread().getName();
+            System.out.println(name);
 
-                while(!cadenaServidor.equals("FI")){
-                    cadenaServidor = dis.readUTF();
-                    System.out.println(cadenaServidor);
+            try {
+                DataInputStream dis = new DataInputStream(socket.getInputStream());
+
+                while (!lock.get()) {
+                    cadenaRebuda = dis.readUTF();
+                    if(!cadenaRebuda.isEmpty()){
+                        System.out.println(cadenaRebuda);
+                        if(cadenaRebuda.equals("FI")) {
+                            lock.set(true);
+                            if(!socket.isClosed()){
+                                socket.close();
+                            }
+                        }
+                    }
+                    //Maybe put a if finalizing the code
+                    Thread.sleep(500);
                 }
-            } catch (IOException e) {
+
+
+                dis.close();
+
+            } catch (IOException io) {
+                System.out.println("Ha hagut un problema inicialitzant el servidor:\n\n" +
+                        io.getMessage());
+            } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-
         }
     }
 
     public static class Resposta implements Runnable {
-        Socket socket;
         String missatge;
+        DataOutputStream dos;
+        BufferedReader br;
 
-        public Resposta(Socket socket)  {
-            this.socket = socket;
+
+        public Resposta() throws IOException {
+            dos = new DataOutputStream(socket.getOutputStream());
+            br = new BufferedReader(new InputStreamReader(System.in));
+            missatge = "";
         }
 
         @Override
         public void run() {
             try {
-                DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-                BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+                while(!lock.get()){
+                    if(br.ready()){
+                        missatge = br.readLine();
+                    }
 
-                missatge = "";
+                    if (!lock.get()){
+                        dos.writeUTF(missatge);
+                        missatge = "";
+                    } else {
+                        br.close();
+                    }
 
-                while (!missatge.equals("FI")) {
-                    missatge = br.readLine();
-                    dos.writeUTF(missatge);
+                    Thread.sleep(500);
                 }
-
                 dos.close();
-                br.close();
+
+                if(!socket.isClosed()){
+                    socket.close();
+                }
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
