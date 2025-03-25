@@ -45,18 +45,20 @@ public class Server {
             try {
                 DataInputStream dis = new DataInputStream(socket.getInputStream());
 
-                while (!cadenaRebuda.equals("FI") && !lock.get()) {
+                while (!lock.get()) {
                     cadenaRebuda = dis.readUTF();
                     if(!cadenaRebuda.isEmpty()){
                         System.out.println(cadenaRebuda);
+                        if(cadenaRebuda.equals("FI")){
+                            lock.set(true);
+                            dis.close();
+                            socket.close();
+                        }
                     }
                     //Maybe put a if finalizing the code
                     Thread.sleep(500);
                 }
-                lock.set(true);
 
-                dis.close();
-                socket.close();
             } catch (IOException io) {
                 System.out.println("Ha hagut un problema inicialitzant el servidor:\n\n" +
                         io.getMessage());
@@ -90,15 +92,17 @@ public class Server {
 
                     if (!lock.get()){
                         dos.writeUTF(missatge);
+                        if(missatge.equals("FI")){
+                            lock.set(true);
+                            br.close();
+                            dos.close();
+                            socket.close();
+                        }
                         missatge = "";
-                    } else {
-                        br.close();
                     }
 
                     Thread.sleep(500);
                 }
-                dos.close();
-                socket.close();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

@@ -44,19 +44,15 @@ public class Client {
                     cadenaRebuda = dis.readUTF();
                     if(!cadenaRebuda.isEmpty()){
                         System.out.println(cadenaRebuda);
-                        if(cadenaRebuda.equals("FI")) {
+                        if(cadenaRebuda.equals("FI")){
                             lock.set(true);
-                            if(!socket.isClosed()){
-                                socket.close();
-                            }
+                            dis.close();
+                            socket.close();
                         }
                     }
                     //Maybe put a if finalizing the code
                     Thread.sleep(500);
                 }
-
-
-                dis.close();
 
             } catch (IOException io) {
                 System.out.println("Ha hagut un problema inicialitzant el servidor:\n\n" +
@@ -89,17 +85,16 @@ public class Client {
 
                     if (!lock.get()){
                         dos.writeUTF(missatge);
+                        if(missatge.equals("FI")){
+                            lock.set(true);
+                            br.close();
+                            dos.close();
+                            socket.close();
+                        }
                         missatge = "";
-                    } else {
-                        br.close();
                     }
 
                     Thread.sleep(500);
-                }
-                dos.close();
-
-                if(!socket.isClosed()){
-                    socket.close();
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
