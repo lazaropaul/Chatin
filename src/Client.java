@@ -21,6 +21,9 @@ public class Client {
 
         try {
             socket = new Socket(HOST, PORT);
+            if (socket.isOutputShutdown()){
+                throw new ConnectException();
+            }
             escolta = new Thread(new Escolta(), "Thread Escolta");
             resposta = new Thread(new Resposta(), "Thread Escolta");
             escolta.start();

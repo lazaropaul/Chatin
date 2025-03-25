@@ -20,6 +20,7 @@ public class Server {
         try {
             serverSocket = new ServerSocket(PORT);
             socket = serverSocket.accept();
+            serverSocket.close(); //Tanquem el serversocket per evitar noves connexions
             System.out.println("Connexió acceptada");
             //Inicialitzem els Threads quan arriba el client per a millor gestió de recursos
             resposta = new Thread(new Resposta(socket), "Thread Resposta");
@@ -33,18 +34,18 @@ public class Server {
 
     public static class Escolta implements Runnable {
         Socket socket;
+        String cadenaRebuda;
+        DataInputStream dis;
 
-        public Escolta(Socket socket)  {
+        public Escolta(Socket socket) throws IOException {
             this.socket = socket;
+            this.cadenaRebuda = "";
+            dis = new DataInputStream(socket.getInputStream());
         }
 
         @Override
         public void run() {
-            String cadenaRebuda = "";
-
             try {
-                DataInputStream dis = new DataInputStream(socket.getInputStream());
-
                 while (!lock.get()) {
                     cadenaRebuda = dis.readUTF();
                     if(!cadenaRebuda.isEmpty()){
