@@ -1,5 +1,7 @@
 import java.io.*;
+import java.net.ConnectException;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Client {
@@ -8,6 +10,8 @@ public class Client {
     private static final String HOST = "localhost";
     private static final AtomicBoolean lock = new AtomicBoolean(false);
     private static Socket socket;
+
+    //TODO: Lock not working, si es tanca el servidor de cop es segueix executant el codi
 
     public static void main(String[] args) {
 
@@ -21,7 +25,9 @@ public class Client {
             resposta = new Thread(new Resposta(), "Thread Escolta");
             escolta.start();
             resposta.start();
-        } catch (Exception e) {
+        } catch (ConnectException connectException) {
+            System.out.println("Servidor no disponible");
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
@@ -34,8 +40,6 @@ public class Client {
         @Override
         public void run() {
             String cadenaRebuda = "";
-            String name = Thread.currentThread().getName();
-            System.out.println(name);
 
             try {
                 DataInputStream dis = new DataInputStream(socket.getInputStream());
@@ -43,7 +47,7 @@ public class Client {
                 while (!lock.get()) {
                     cadenaRebuda = dis.readUTF();
                     if(!cadenaRebuda.isEmpty()){
-                        System.out.println(cadenaRebuda);
+                        System.out.println("Servidor: <<" + cadenaRebuda + ">>");
                         if(cadenaRebuda.equals("FI")){
                             lock.set(true);
                             dis.close();
@@ -54,11 +58,9 @@ public class Client {
                     Thread.sleep(500);
                 }
 
-            } catch (IOException io) {
-                System.out.println("Ha hagut un problema inicialitzant el servidor:\n\n" +
-                        io.getMessage());
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+            } catch (IOException | InterruptedException io) {
+                System.out.println("S'ha interromput la connexió amb el servidor");
+                lock.set(true); //Evitem que es segueixi escoltant al servidor
             }
         }
     }

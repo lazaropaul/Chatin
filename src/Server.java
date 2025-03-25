@@ -7,8 +7,9 @@ public class Server {
     private static final int PORT = 1234;
     private static final AtomicBoolean lock = new AtomicBoolean(false);
 
-    //TODO: Llegir unicament un altre cop si el atomicBoolean el qual bloqueja la lectura es true https://medium.com/@rahul.tpointtech12/step-by-step-tutorial-on-java-atomicboolean-usage-8e958032b901
-    //TODO: br.ready() per saber si la cadena esta buida
+    //TODO: Finally per tancar els bufferedreaders i tal
+
+
     public static void main(String[] args) {
         ServerSocket serverSocket;
         Socket socket;
@@ -19,6 +20,7 @@ public class Server {
         try {
             serverSocket = new ServerSocket(PORT);
             socket = serverSocket.accept();
+            System.out.println("Connexió acceptada");
             //Inicialitzem els Threads quan arriba el client per a millor gestió de recursos
             resposta = new Thread(new Resposta(socket), "Thread Resposta");
             escolta = new Thread(new Escolta(socket), "Thread Escolta");
@@ -39,8 +41,6 @@ public class Server {
         @Override
         public void run() {
             String cadenaRebuda = "";
-            String name = Thread.currentThread().getName();
-            System.out.println(name);
 
             try {
                 DataInputStream dis = new DataInputStream(socket.getInputStream());
@@ -48,7 +48,7 @@ public class Server {
                 while (!lock.get()) {
                     cadenaRebuda = dis.readUTF();
                     if(!cadenaRebuda.isEmpty()){
-                        System.out.println(cadenaRebuda);
+                        System.out.println("Client: <<" + cadenaRebuda + ">>");
                         if(cadenaRebuda.equals("FI")){
                             lock.set(true);
                             dis.close();
@@ -59,11 +59,9 @@ public class Server {
                     Thread.sleep(500);
                 }
 
-            } catch (IOException io) {
-                System.out.println("Ha hagut un problema inicialitzant el servidor:\n\n" +
-                        io.getMessage());
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+            } catch (IOException | InterruptedException io) {
+                System.out.println("S'ha interromput la connexió amb el client");
+                lock.set(true); //Evitem que es segueixi escoltant al client
             }
         }
     }
@@ -85,6 +83,9 @@ public class Server {
         @Override
         public void run() {
             try {
+
+                missatge = "Connexió acceptada";
+
                 while(!lock.get()){
                     if(br.ready()){
                         missatge = br.readLine();
