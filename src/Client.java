@@ -21,86 +21,14 @@ public class Client {
 
         try {
             socket = new Socket(HOST, PORT);
-            escolta = new Thread(new Escolta(), "Thread Escolta");
-            resposta = new Thread(new Resposta(), "Thread Escolta");
+            resposta = new Thread(new ResponseHandler(socket, lock, false), "Thread Resposta");
+            escolta = new Thread(new ListenHandler(socket, lock, false), "Thread Escolta");
             escolta.start();
             resposta.start();
         } catch (ConnectException connectException) {
             System.out.println("Servidor no disponible");
         } catch (IOException e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    public static class Escolta implements Runnable {
-
-        public Escolta()  {
-        }
-
-        @Override
-        public void run() {
-            String cadenaRebuda = "";
-
-            try {
-                DataInputStream dis = new DataInputStream(socket.getInputStream());
-
-                while (!lock.get()) {
-                    cadenaRebuda = dis.readUTF();
-                    if(!cadenaRebuda.isEmpty()){
-                        System.out.println("Servidor: <<" + cadenaRebuda + ">>");
-                        if(cadenaRebuda.equals("FI")){
-                            lock.set(true);
-                            dis.close();
-                            socket.close();
-                        }
-                    }
-                    //Maybe put a if finalizing the code
-                    Thread.sleep(500);
-                }
-
-            } catch (IOException | InterruptedException io) {
-                System.out.println("S'ha interromput la connexió amb el servidor");
-                lock.set(true); //Evitem que es segueixi escoltant al servidor
-            }
-        }
-    }
-
-    public static class Resposta implements Runnable {
-        String missatge;
-        DataOutputStream dos;
-        BufferedReader br;
-
-
-        public Resposta() throws IOException {
-            dos = new DataOutputStream(socket.getOutputStream());
-            br = new BufferedReader(new InputStreamReader(System.in));
-            missatge = "";
-        }
-
-        @Override
-        public void run() {
-            try {
-                while(!lock.get()){
-                    if(br.ready()){
-                        missatge = br.readLine();
-                    }
-
-                    if (!lock.get()){
-                        dos.writeUTF(missatge);
-                        if(missatge.equals("FI")){
-                            lock.set(true);
-                            br.close();
-                            dos.close();
-                            socket.close();
-                        }
-                        missatge = "";
-                    }
-
-                    Thread.sleep(500);
-                }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
         }
     }
 
