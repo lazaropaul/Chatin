@@ -1,2 +1,2 @@
 # Chatin
-Aplicació pràctica dels conceptes apresos a classe mitjançant el desenvolupament d’un xat basat en una arquitectura client-servidor.
+Senzilla aplicació pràctica dels conceptes apresos en l'assignatura de xarxes mitjançant el desenvolupament d’un xat basat en una arquitectura client-servidor.
